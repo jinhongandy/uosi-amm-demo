@@ -717,63 +717,49 @@
       const pct = Number(bps) / 100;
       return `${pct.toFixed(1)}%`;
     }
-
+    
     async function updateSwapPriceImpact() {
       try {
         if (!state.amm) {
           $("swapPriceImpact").value = "-";
           return;
         }
-
+    
         const fromToken = $("swapFromToken").value;
         const toToken = $("swapToToken").value;
         const fromRaw = $("swapFromAmount").value.trim();
-        const toRaw = $("swapToAmount").value.trim();
-        if (!fromRaw || !toRaw) { $("swapPriceImpact").value = "-"; return; }
-
-        let reserveIn, amountIn, amountOut;
+    
+        if (!fromRaw) {
+          $("swapPriceImpact").value = "-";
+          return;
+        }
+    
+        let reserveIn, amountIn;
+    
         if (fromToken === "A" && toToken === "B") {
           reserveIn = await state.amm.reserveA();
           amountIn = parseTokenInput(fromRaw, state.tokenAMeta.decimals);
-          amountOut = parseTokenInput(toRaw, state.tokenBMeta.decimals);
         } else if (fromToken === "B" && toToken === "A") {
           reserveIn = await state.amm.reserveB();
           amountIn = parseTokenInput(fromRaw, state.tokenBMeta.decimals);
-          amountOut = parseTokenInput(toRaw, state.tokenAMeta.decimals);
         } else {
           $("swapPriceImpact").value = "-";
           return;
         }
-
-        if (reserveIn <= 0n || amountIn <= 0n || amountOut <= 0n) {
+    
+        if (reserveIn <= 0n || amountIn <= 0n) {
           $("swapPriceImpact").value = "-";
           return;
         }
-
-        // UI 口径：只显示曲线导致的滑点，不包含 0.3% fee。
-        // 预览 amountOut 是扣过 fee 后的输出，因此先除以 0.997 还原成“无手续费输出”。
-        const amountOutNoFee = (amountOut * 1000n) / 997n;
-        const spotPriceScaled = 10_000_000_000_000_000_000n;
-        const execPriceScaled = (amountOutNoFee * spotPriceScaled) / amountIn;
-
-        if (execPriceScaled <= 0n) {
-          $("swapPriceImpact").value = "-";
-          return;
-        }
-
-        let impactBps;
-        if (execPriceScaled >= spotPriceScaled) {
-          impactBps = 0n;
-        } else {
-          impactBps = ((spotPriceScaled - execPriceScaled) * 10000n) / spotPriceScaled;
-        }
+    
+        const impactBps = (amountIn * 10000n) / (reserveIn + amountIn);
         $("swapPriceImpact").value = formatPriceImpactBps(impactBps);
       } catch (err) {
         console.error("updateSwapPriceImpact error:", err);
         $("swapPriceImpact").value = "-";
       }
     }
-
+        
     async function updateSwapPreview() {
       try {
         if (!state.amm) return;
