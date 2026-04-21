@@ -838,6 +838,7 @@
       if (message.includes("Slippage too high")) return "滑点过高，交易已回滚。";
       if (message.includes("transfer amount exceeds")) return "余额不足。";
       if (message.includes("allowance")) return "授权额度不足，请先 Approve。";
+      if (message.includes("Empty pool")) return "池子当前为空，请先初始化流动性。";
       return message;
     }
 
@@ -851,8 +852,49 @@
     $("addLiquidityBtn").addEventListener("click", executeAddLiquidity);
     $("previewRemoveBtn").addEventListener("click", previewRemoveLiquidity);
     $("removeLiquidityBtn").addEventListener("click", executeRemoveLiquidity);
-    $("previewSwapBtn").addEventListener("click", previewSwap);
     $("executeSwapBtn").addEventListener("click", executeSwap);
+
+    $("swapFromToken").addEventListener("change", async () => {
+      syncSwapSelects("from");
+      await updateSwapPreview();
+    });
+
+    $("swapToToken").addEventListener("change", async () => {
+      syncSwapSelects("to");
+      await updateSwapPreview();
+    });
+
+    $("swapDirectionBtn").addEventListener("click", async () => {
+      const currentFrom = $("swapFromToken").value;
+      $("swapFromToken").value = $("swapToToken").value;
+      $("swapToToken").value = currentFrom;
+      const oldFromAmount = $("swapFromAmount").value;
+      $("swapFromAmount").value = $("swapToAmount").value;
+      $("swapToAmount").value = oldFromAmount;
+      state.swapLastEdited = $("swapFromAmount").value ? "from" : "to";
+      updateSwapButtonLabel();
+      await updateSwapPreview();
+    });
+
+    $("swapFromAmount").addEventListener("input", async () => {
+      state.swapLastEdited = "from";
+      await updateSwapPreview();
+    });
+
+    $("swapToAmount").addEventListener("input", async () => {
+      state.swapLastEdited = "to";
+      await updateSwapPreview();
+    });
+
+    $("swapSlippageInline").addEventListener("input", async () => {
+      $("swapSlippageInput").value = $("swapSlippageInline").value;
+      await updateSwapPreview();
+    });
+
+    $("swapSlippageInput").addEventListener("input", async () => {
+      $("swapSlippageInline").value = $("swapSlippageInput").value;
+      await updateSwapPreview();
+    });
 
     if (window.ethereum) {
       window.ethereum.on("accountsChanged", async () => {
