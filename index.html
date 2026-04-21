@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UoSiL AMM Demo 13</title>
+  <title>UoSiL AMM Demo</title>
   <style>
     :root {
       --bg: #0b1020;
@@ -146,7 +146,7 @@
   <div class="container">
     <div class="hero">
       <div>
-        <h1>UoSiL AMM Demo</h1>
+        <h1>UoSiL AMM Demo 13</h1>
         <div class="row" style="margin-top:10px;">
           <span class="tag">Web-based Demo</span>
           <span class="tag">MetaMask + Ethers</span>
@@ -714,7 +714,7 @@
 
     function formatPriceImpactBps(bps) {
       if (bps < 10) return "<0.1%";
-      const tenths = Number(bps) / 10;
+      const tenths = Number(bps) / 100;
       return `${tenths.toFixed(1)}%`;
     }
 
