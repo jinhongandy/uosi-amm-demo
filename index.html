@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UoSiL AMM Demo</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #131a2a;
+      --panel-2: #1a2338;
+      --border: #2a3550;
+      --text: #eef2ff;
+      --muted: #9fb0d0;
+      --accent: #7c9cff;
+      --danger: #f87171;
+      --ok: #4ade80;
+      --warn: #fbbf24;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #09101d 0%, #0b1020 100%);
+      color: var(--text);
+    }
+    .container { width: min(1200px, calc(100% - 32px)); margin: 28px auto 48px; }
+    .hero {
+      display: flex; justify-content: space-between; gap: 16px; align-items: center;
+      margin-bottom: 20px; padding: 20px; border: 1px solid var(--border);
+      border-radius: 20px; background: linear-gradient(180deg, rgba(124,156,255,0.12), rgba(255,255,255,0.02));
+    }
+    h1, h2, h3 { margin: 0; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 18px; margin-bottom: 14px; }
+    p { margin: 6px 0; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .card {
+      grid-column: span 12; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 18px; padding: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+    }
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    @media (max-width: 900px) {
+      .col-4, .col-6, .col-8 { grid-column: span 12; }
+      .hero { flex-direction: column; align-items: flex-start; }
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .metric {
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px; min-width: 160px; flex: 1;
+    }
+    .metric .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .metric .value { font-size: 18px; font-weight: 700; word-break: break-word; }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%; border: 1px solid var(--border); background: #0e1628; color: var(--text);
+      border-radius: 12px; padding: 12px 14px; outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,156,255,0.14);
+    }
+    .field { margin-bottom: 12px; }
+    .btn {
+      border: 0; border-radius: 12px; padding: 12px 14px; cursor: pointer; font-weight: 700;
+      color: white; background: #334155; transition: 0.2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #5b7fff); }
+    .btn-secondary { background: linear-gradient(135deg, #334155, #475569); }
+    .btn-success { background: linear-gradient(135deg, #10b981, #22c55e); }
+    .btn-warning { background: linear-gradient(135deg, #d97706, #f59e0b); }
+    .btn-danger { background: linear-gradient(135deg, #dc2626, #ef4444); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-mini {
+      padding: 8px 12px;
+      font-size: 12px;
+      border-radius: 999px;
+    }
+    .split-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 700px) { .split-2 { grid-template-columns: 1fr; } }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .status {
+      white-space: pre-wrap; background: #0e1628; border: 1px solid var(--border); border-radius: 14px;
+      padding: 14px; min-height: 110px; color: #dbeafe; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px; line-height: 1.45;
+    }
+    .tag {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px;
+      background: rgba(94,234,212,0.08); border: 1px solid rgba(94,234,212,0.18); color: #ccfbf1;
+      font-size: 12px; font-weight: 600;
+    }
+    .note { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--muted); font-size: 13px; margin-top: 8px; }
+    .swap-shell { max-width: 560px; }
+    .swap-box { background: var(--panel-2); border: 1px solid var(--border); border-radius: 20px; padding: 16px; }
+    .swap-box-title { margin-bottom: 10px; color: var(--muted); font-size: 13px; }
+    .swap-big-input { font-size: 32px; padding: 10px 0; border: none; background: transparent; box-shadow: none; }
+    .swap-token-select { width: 180px; }
+    .swap-mid { display: flex; justify-content: center; margin: -12px 0; position: relative; z-index: 2; }
+    .swap-mid-btn { border-radius: 50%; width: 48px; height: 48px; padding: 0; font-size: 20px; }
+    .holding-box {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .holding-box .title {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .holding-box .main {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .holding-box .sub {
+      font-size: 13px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <div>
+        <h1>UoSiL AMM Demo</h1>
+        <p>单文件网页版前端：连接钱包、授权、报价预览、加池、减池、Swap、状态刷新</p>
+        <div class="row" style="margin-top:10px;">
+          <span class="tag">Web-based Demo</span>
+          <span class="tag">MetaMask + Ethers</span>
+          <span class="tag">AMM / Liquidity / Quotes</span>
+        </div>
+      </div>
+      <div class="row">
+        <button id="connectBtn" class="btn btn-primary">连接钱包</button>
+        <button id="refreshBtn" class="btn btn-secondary">刷新状态</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card col-8">
+        <h2>连接与合约配置</h2>
+        <div class="split-2">
+          <div class="field">
+            <label for="ammAddress">AMM 合约地址</label>
+            <input id="ammAddress" placeholder="0x..." />
+          </div>
+          <div class="field">
+            <label for="slippageInput">默认滑点容忍度 (%)</label>
+            <input id="slippageInput" type="number" step="0.1" value="0.5" />
+          </div>
+        </div>
+        <div class="note">你只需要把已部署的 UoSiLAMM 地址填进去。Token A / Token B 地址会从合约里自动读取。</div>
+      </div>
+
+      <div class="card col-4">
+        <h2>钱包状态</h2>
+        <p><span class="muted">地址：</span><span id="walletAddress" class="mono">未连接</span></p>
+        <p><span class="muted">网络：</span><span id="networkName">-</span></p>
+        <p><span class="muted">AMM：</span><span id="ammStatus">未初始化</span></p>
+      </div>
+
+      <div class="card col-8">
+        <h2>池子概览</h2>
+        <div class="row">
+          <div class="metric"><div class="label">Token 1</div><div class="value" id="tokenAInfo">-</div></div>
+          <div class="metric"><div class="label">Token 2</div><div class="value" id="tokenBInfo">-</div></div>
+          <div class="metric"><div class="label" id="reserveALabel">Reserve</div><div class="value" id="reserveAValue">-</div></div>
+          <div class="metric"><div class="label" id="reserveBLabel">Reserve</div><div class="value" id="reserveBValue">-</div></div>
+          <div class="metric"><div class="label" id="priceALabel">Price</div><div class="value" id="priceAInB">-</div></div>
+          <div class="metric"><div class="label" id="priceBLabel">Price</div><div class="value" id="priceBInA">-</div></div>
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <h2>我的资产</h2>
+        <div class="row">
+          <div class="metric"><div class="label" id="userBalanceALabel">我的资产</div><div class="value" id="userBalanceA">-</div></div>
+          <div class="metric"><div class="label" id="userBalanceBLabel">我的资产</div><div class="value" id="userBalanceB">-</div></div>
+          <div class="metric"><div class="label">我的 LP Shares</div><div class="value" id="userShares">-</div></div>
+          <div class="metric"><div class="label">Total Shares</div><div class="value" id="totalShares">-</div></div>
+        </div>
+      </div>
+
+      <div class="card col-6">
+        <h2>授权（Approve）</h2>
+        <div class="split-2">
+          <div>
+            <div class="field">
+              <label for="approveAAmount" id="approveALabel">Approve Token 数量</label>
+              <input id="approveAAmount" placeholder="例如 1000" />
+            </div>
+            <button id="approveABtn" class="btn btn-warning">授权 Token 1</button>
+          </div>
+          <div>
+            <div class="field">
+              <label for="approveBAmount" id="approveBLabel">Approve Token 数量</label>
+              <input id="approveBAmount" placeholder="例如 1000" />
+            </div>
+            <button id="approveBBtn" class="btn btn-warning">授权 Token 2</button>
+          </div>
+        </div>
+        <p class="small muted">因为 AMM 使用的是 transferFrom，所以在 addLiquidity / swap 前，通常需要先授权。</p>
+      </div>
+
+      <div class="card col-6">
+        <h2>交易日志 / 状态</h2>
+        <div id="statusBox" class="status">等待操作...</div>
+      </div>
+
+      <div class="card col-6">
+        <h2>Add Liquidity</h2>
+        <div class="split-2">
+          <div class="field">
+            <label for="addAmountA" id="addAmountALabel">Amount Desired</label>
+            <input id="addAmountA" placeholder="例如 10" />
+          </div>
+          <div class="field">
+            <label for="addAmountB" id="addAmountBLabel">Amount Desired</label>
+            <input id="addAmountB" placeholder="例如 20000" />
+          </div>
+        </div>
+        <div class="field" style="max-width:220px; margin-bottom:12px;">
+          <label for="addSlippageInput">加池滑点容忍度 (%)</label>
+          <input id="addSlippageInput" type="number" step="0.1" value="0.5" />
+        </div>
+        <div class="row" style="margin-bottom:12px;">
+          <button id="addLiquidityBtn" class="btn btn-success">执行 Add Liquidity</button>
+        </div>
+        <div class="row">
+          <div class="metric"><div class="label" id="previewAddActualALabel">实际投入</div><div class="value" id="previewAddActualA">-</div></div>
+          <div class="metric"><div class="label" id="previewAddActualBLabel">实际投入</div><div class="value" id="previewAddActualB">-</div></div>
+          <div class="metric"><div class="label">预计铸造 Shares</div><div class="value" id="previewAddShares">-</div></div>
+        </div>
+        <p class="small muted">输入任意一边资产，另一边会自动按当前池子比例补齐。首次加池时请手动输入两边。</p>
+      </div>
+
+      <div class="card col-6">
+        <h2>Remove Liquidity</h2>
+
+        <div class="holding-box">
+          <div class="title">当前持有</div>
+          <div class="main" id="removeHoldingShares">-</div>
+          <div class="sub" id="removeHoldingAssets">-</div>
+        </div>
+
+        <div class="field">
+          <label for="removeShareAmount">Share Amount</label>
+          <input id="removeShareAmount" placeholder="例如 5" />
+        </div>
+
+        <div class="row" style="margin-bottom:12px;">
+          <button class="btn btn-ghost btn-mini" data-remove-pct="25">25%</button>
+          <button class="btn btn-ghost btn-mini" data-remove-pct="50">50%</button>
+          <button class="btn btn-ghost btn-mini" data-remove-pct="75">75%</button>
+          <button class="btn btn-ghost btn-mini" data-remove-pct="100">100%</button>
+        </div>
+
+        <div class="row" style="margin-bottom:12px;">
+          <button id="removeLiquidityBtn" class="btn btn-danger">执行 Remove Liquidity</button>
+        </div>
+
+        <div class="row">
+          <div class="metric"><div class="label" id="previewRemoveALabel">预计取回</div><div class="value" id="previewRemoveA">-</div></div>
+          <div class="metric"><div class="label" id="previewRemoveBLabel">预计取回</div><div class="value" id="previewRemoveB">-</div></div>
+        </div>
+      </div>
+
+      <div class="card col-12">
+        <h2>Swap</h2>
+        <div class="field" style="max-width:220px; margin-bottom:12px;">
+          <label for="swapSlippageInline">滑点容忍度 (%)（当前不参与 Swap 执行）</label>
+          <input id="swapSlippageInline" type="number" step="0.1" value="0.5" />
+        </div>
+
+        <div class="swap-shell">
+          <div class="swap-box">
+            <div class="swap-box-title">卖出</div>
+            <div class="row" style="align-items:center;">
+              <div style="flex:1;"><input id="swapFromAmount" placeholder="0" class="swap-big-input" /></div>
+              <div class="swap-token-select">
+                <select id="swapFromToken">
+                  <option value="A">Token A</option>
+                  <option value="B">Token B</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="swap-mid">
+            <button id="swapDirectionBtn" class="btn btn-ghost swap-mid-btn">↓</button>
+          </div>
+
+          <div class="swap-box">
+            <div class="swap-box-title">买入</div>
+            <div class="row" style="align-items:center;">
+              <div style="flex:1;"><input id="swapToAmount" placeholder="0" class="swap-big-input" /></div>
+              <div class="swap-token-select">
+                <select id="swapToToken">
+                  <option value="B">Token B</option>
+                  <option value="A">Token A</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:14px;">
+            <button id="executeSwapBtn" class="btn btn-primary">执行 Swap</button>
+          </div>
+
+          <p id="swapHint" class="small muted" style="margin-top:10px;">在上框输入时，自动正向报价；在下框输入时，自动反向报价。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+  <script>
+    const { ethers } = window;
+
+    const AMM_ABI = [
+      {"inputs":[{"internalType":"uint256","name":"amountADesired","type":"uint256"},{"internalType":"uint256","name":"amountBDesired","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"}],"name":"addLiquidity","outputs":[{"internalType":"uint256","name":"actualAmountA","type":"uint256"},{"internalType":"uint256","name":"actualAmountB","type":"uint256"},{"internalType":"uint256","name":"mintedShares","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"shareAmount","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"}],"name":"removeLiquidity","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountAIn","type":"uint256"},{"internalType":"uint256","name":"amountBOutMin","type":"uint256"}],"name":"swapAForB","outputs":[{"internalType":"uint256","name":"amountBOut","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountBIn","type":"uint256"},{"internalType":"uint256","name":"amountAOutMin","type":"uint256"}],"name":"swapBForA","outputs":[{"internalType":"uint256","name":"amountAOut","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[],"name":"getCurrentPriceAInB","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"getCurrentPriceBInA","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountADesired","type":"uint256"},{"internalType":"uint256","name":"amountBDesired","type":"uint256"}],"name":"quoteAddLiquidity","outputs":[{"internalType":"uint256","name":"actualAmountA","type":"uint256"},{"internalType":"uint256","name":"actualAmountB","type":"uint256"},{"internalType":"uint256","name":"mintedShares","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountADesired","type":"uint256"}],"name":"quoteAddLiquidityFromA","outputs":[{"internalType":"uint256","name":"requiredAmountB","type":"uint256"},{"internalType":"uint256","name":"mintedShares","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountBDesired","type":"uint256"}],"name":"quoteAddLiquidityFromB","outputs":[{"internalType":"uint256","name":"requiredAmountA","type":"uint256"},{"internalType":"uint256","name":"mintedShares","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"shareAmount","type":"uint256"}],"name":"quoteRemoveLiquidity","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountAIn","type":"uint256"}],"name":"quoteSwapAForB","outputs":[{"internalType":"uint256","name":"amountBOut","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountBOut","type":"uint256"}],"name":"quoteSwapAForExactB","outputs":[{"internalType":"uint256","name":"amountAIn","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountBIn","type":"uint256"}],"name":"quoteSwapBForA","outputs":[{"internalType":"uint256","name":"amountAOut","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amountAOut","type":"uint256"}],"name":"quoteSwapBForExactA","outputs":[{"internalType":"uint256","name":"amountBIn","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"reserveA","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"reserveB","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"shares","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"tokenA","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"tokenB","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"totalShares","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+    ];
+
+    const ERC20_ABI = [
+      "function name() view returns (string)",
+      "function symbol() view returns (string)",
+      "function decimals() view returns (uint8)",
+      "function balanceOf(address) view returns (uint256)",
+      "function approve(address,uint256) returns (bool)"
+    ];
+
+    const state = {
+      provider: null,
+      signer: null,
+      account: null,
+      amm: null,
+      tokenA: null,
+      tokenB: null,
+      tokenAMeta: { address: null, symbol: "A", decimals: 18, name: "Token A" },
+      tokenBMeta: { address: null, symbol: "B", decimals: 18, name: "Token B" },
+      network: null,
+      swapLastEdited: "from",
+      addLastEdited: "A",
+      currentUserShares: 0n
+    };
+
+    const $ = (id) => document.getElementById(id);
+
+    function setStatus(message, type = "info") {
+      const prefix = type === "error" ? "[ERROR]" : type === "success" ? "[OK]" : type === "warn" ? "[WARN]" : "[INFO]";
+      $("statusBox").textContent = `${prefix} ${message}`;
+    }
+    function shortAddr(addr) { return !addr ? "-" : `${addr.slice(0, 6)}...${addr.slice(-4)}`; }
+    function num(value) { return (value === null || value === undefined || value === "") ? null : value.trim(); }
+    function formatToken(value, decimals, precision = 6) {
+      try {
+        const s = ethers.formatUnits(value, decimals);
+        const [i, d] = s.split(".");
+        if (!d) return i;
+        return `${i}.${d.slice(0, precision)}`.replace(/\.$/, "");
+      } catch { return "-"; }
+    }
+    function formatShare(value, precision = 6) {
+      try {
+        const s = ethers.formatUnits(value, 18);
+        const [i, d] = s.split(".");
+        if (!d) return i;
+        return `${i}.${d.slice(0, precision)}`.replace(/\.$/, "");
+      } catch { return value?.toString?.() ?? "-"; }
+    }
+    function parseTokenInput(value, decimals) { return ethers.parseUnits(value, decimals); }
+    function parseShareInput(value) { return ethers.parseUnits(value, 18); }
+    function slippageBpsFrom(id, fallback = "0.5") {
+      const raw = Number($(id).value || fallback);
+      if (Number.isNaN(raw) || raw < 0) return 50n;
+      return BigInt(Math.round(raw * 100));
+    }
+    function applySlippageMin(amount, bps) { return (amount * (10000n - bps)) / 10000n; }
+    async function safeCall(fn, fallback) { try { return await fn(); } catch { return fallback; } }
+
+    async function connectWallet() {
+      try {
+        if (!window.ethereum) {
+          setStatus("未检测到 MetaMask。请确认你是在 HTTPS 页面里打开。", "error");
+          return;
+        }
+        state.provider = new ethers.BrowserProvider(window.ethereum);
+        await state.provider.send("eth_requestAccounts", []);
+        state.signer = await state.provider.getSigner();
+        state.account = await state.signer.getAddress();
+        state.network = await state.provider.getNetwork();
+        $("walletAddress").textContent = shortAddr(state.account);
+        $("networkName").textContent = `${state.network.name} (chainId ${state.network.chainId})`;
+        setStatus("钱包已连接。接下来请填写 AMM 地址并点击刷新状态。", "success");
+      } catch (err) { setStatus(explainError(err), "error"); }
+    }
+
+    async function initContracts() {
+      if (!state.signer) throw new Error("请先连接钱包");
+      const ammAddress = $("ammAddress").value.trim();
+      if (!ammAddress) throw new Error("请填写 AMM 合约地址");
+
+      state.amm = new ethers.Contract(ammAddress, AMM_ABI, state.signer);
+      const tokenAAddress = await state.amm.tokenA();
+      const tokenBAddress = await state.amm.tokenB();
+
+      state.tokenA = new ethers.Contract(tokenAAddress, ERC20_ABI, state.signer);
+      state.tokenB = new ethers.Contract(tokenBAddress, ERC20_ABI, state.signer);
+
+      state.tokenAMeta = {
+        address: tokenAAddress,
+        symbol: await safeCall(() => state.tokenA.symbol(), "A"),
+        decimals: Number(await safeCall(() => state.tokenA.decimals(), 18)),
+        name: await safeCall(() => state.tokenA.name(), "Token A")
+      };
+      state.tokenBMeta = {
+        address: tokenBAddress,
+        symbol: await safeCall(() => state.tokenB.symbol(), "B"),
+        decimals: Number(await safeCall(() => state.tokenB.decimals(), 18)),
+        name: await safeCall(() => state.tokenB.name(), "Token B")
+      };
+
+      $("ammStatus").textContent = shortAddr(ammAddress);
+      updateLabels();
+      updateSwapTokenLabels();
+    }
+
+    function updateLabels() {
+      const aName = state.tokenAMeta.name || "Token A";
+      const bName = state.tokenBMeta.name || "Token B";
+      const aSymbol = state.tokenAMeta.symbol || "A";
+      const bSymbol = state.tokenBMeta.symbol || "B";
+      $("tokenAInfo").textContent = `${aName} (${aSymbol})`;
+      $("tokenBInfo").textContent = `${bName} (${bSymbol})`;
+      $("reserveALabel").textContent = `${aSymbol} Reserve`;
+      $("reserveBLabel").textContent = `${bSymbol} Reserve`;
+      $("priceALabel").textContent = `${aSymbol} in ${bSymbol}`;
+      $("priceBLabel").textContent = `${bSymbol} in ${aSymbol}`;
+      $("userBalanceALabel").textContent = `我的 ${aSymbol}`;
+      $("userBalanceBLabel").textContent = `我的 ${bSymbol}`;
+      $("approveALabel").textContent = `Approve ${aSymbol} 数量`;
+      $("approveBLabel").textContent = `Approve ${bSymbol} 数量`;
+      $("approveABtn").textContent = `授权 ${aSymbol}`;
+      $("approveBBtn").textContent = `授权 ${bSymbol}`;
+      $("addAmountALabel").textContent = `${aSymbol} Amount Desired`;
+      $("addAmountBLabel").textContent = `${bSymbol} Amount Desired`;
+      $("previewAddActualALabel").textContent = `实际投入 ${aSymbol}`;
+      $("previewAddActualBLabel").textContent = `实际投入 ${bSymbol}`;
+      $("previewRemoveALabel").textContent = `预计取回 ${aSymbol}`;
+      $("previewRemoveBLabel").textContent = `预计取回 ${bSymbol}`;
+    }
+
+    function updateSwapTokenLabels() {
+      const fromSelect = $("swapFromToken");
+      const toSelect = $("swapToToken");
+      const currentFrom = fromSelect.value || "A";
+      const currentTo = toSelect.value || "B";
+      const aLabel = state.tokenAMeta.symbol || state.tokenAMeta.name || "Token A";
+      const bLabel = state.tokenBMeta.symbol || state.tokenBMeta.name || "Token B";
+
+      fromSelect.innerHTML = `<option value="A">${aLabel}</option><option value="B">${bLabel}</option>`;
+      toSelect.innerHTML = `<option value="A">${aLabel}</option><option value="B">${bLabel}</option>`;
+
+      if (!fromSelect.dataset.initialized) {
+        fromSelect.value = "A";
+        toSelect.value = "B";
+        fromSelect.dataset.initialized = "1";
+      } else {
+        fromSelect.value = currentFrom;
+        toSelect.value = currentTo;
+        if (fromSelect.value === toSelect.value) {
+          toSelect.value = fromSelect.value === "A" ? "B" : "A";
+        }
+      }
+    }
+
+    async function updateRemoveHoldingSummary() {
+      try {
+        if (!state.amm || !state.account) return;
+        const userShares = await state.amm.shares(state.account);
+        state.currentUserShares = userShares;
+        $("removeHoldingShares").textContent = `${formatShare(userShares)} LP Shares`;
+
+        if (userShares > 0n) {
+          const [amountA, amountB] = await state.amm.quoteRemoveLiquidity(userShares);
+          $("removeHoldingAssets").textContent =
+            `预估可对应 ${formatToken(amountA, state.tokenAMeta.decimals, 8)} ${state.tokenAMeta.symbol} + ${formatToken(amountB, state.tokenBMeta.decimals, 8)} ${state.tokenBMeta.symbol}`;
+        } else {
+          $("removeHoldingAssets").textContent = `预估可对应 0 ${state.tokenAMeta.symbol} + 0 ${state.tokenBMeta.symbol}`;
+        }
+      } catch {
+        $("removeHoldingShares").textContent = "-";
+        $("removeHoldingAssets").textContent = "-";
+      }
+    }
+
+    async function refreshState() {
+      try {
+        await initContracts();
+        const [reserveA, reserveB, totalShares, userShares, balA, balB] = await Promise.all([
+          state.amm.reserveA(),
+          state.amm.reserveB(),
+          state.amm.totalShares(),
+          state.amm.shares(state.account),
+          state.tokenA.balanceOf(state.account),
+          state.tokenB.balanceOf(state.account)
+        ]);
+
+        state.currentUserShares = userShares;
+
+        $("reserveAValue").textContent = `${formatToken(reserveA, state.tokenAMeta.decimals)} ${state.tokenAMeta.symbol}`;
+        $("reserveBValue").textContent = `${formatToken(reserveB, state.tokenBMeta.decimals)} ${state.tokenBMeta.symbol}`;
+        $("totalShares").textContent = formatShare(totalShares);
+        $("userShares").textContent = formatShare(userShares);
+        $("userBalanceA").textContent = `${formatToken(balA, state.tokenAMeta.decimals)} ${state.tokenAMeta.symbol}`;
+        $("userBalanceB").textContent = `${formatToken(balB, state.tokenBMeta.decimals)} ${state.tokenBMeta.symbol}`;
+
+        if (reserveA > 0n) $("priceAInB").textContent = formatToken(await state.amm.getCurrentPriceAInB(), 18, 8);
+        else $("priceAInB").textContent = "-";
+
+        if (reserveB > 0n) $("priceBInA").textContent = formatToken(await state.amm.getCurrentPriceBInA(), 18, 8);
+        else $("priceBInA").textContent = "-";
+
+        await updateRemoveHoldingSummary();
+        await autoPreviewAddLiquidity();
+        await autoPreviewRemoveLiquidity();
+
+        setStatus("状态已刷新。", "success");
+      } catch (err) { setStatus(explainError(err), "error"); }
+    }
+
+    async function approveToken(which) {
+      try {
+        await initContracts();
+        const token = which === "A" ? state.tokenA : state.tokenB;
+        const meta = which === "A" ? state.tokenAMeta : state.tokenBMeta;
+        const raw = which === "A" ? num($("approveAAmount").value) : num($("approveBAmount").value);
+        if (!raw) throw new Error(`请输入要授权的 ${meta.symbol} 数量`);
+        const amount = parseTokenInput(raw, meta.decimals);
+        const tx = await token.approve(state.amm.target, amount);
+        setStatus(`已提交 ${meta.symbol} 授权交易：${tx.hash}`);
+        await tx.wait();
+        setStatus(`${meta.symbol} 授权成功。`, "success");
+      } catch (err) { setStatus(explainError(err), "error"); }
+    }
+
+    async function autoPreviewAddLiquidity() {
+      try {
+        await initContracts();
+        const rawA = num($("addAmountA").value);
+        const rawB = num($("addAmountB").value);
+
+        if (!rawA && !rawB) {
+          $("previewAddActualA").textContent = "-";
+          $("previewAddActualB").textContent = "-";
+          $("previewAddShares").textContent = "-";
+          return;
+        }
+
+        const totalShares = await state.amm.totalShares();
+
+        if (totalShares === 0n) {
+          if (rawA && rawB) {
+            const amountA = parseTokenInput(rawA, state.tokenAMeta.decimals);
+            const amountB = parseTokenInput(rawB, state.tokenBMeta.decimals);
+            const [actualA, actualB, mintedShares] = await state.amm.quoteAddLiquidity(amountA, amountB);
+            $("previewAddActualA").textContent = `${formatToken(actualA, state.tokenAMeta.decimals, 12)} ${state.tokenAMeta.symbol}`;
+            $("previewAddActualB").textContent = `${formatToken(actualB, state.tokenBMeta.decimals, 12)} ${state.tokenBMeta.symbol}`;
+            $("previewAddShares").textContent = formatShare(mintedShares);
+          }
+          return;
+        }
+
+        if (state.addLastEdited === "A") {
+          if (!rawA) {
+            $("addAmountB").value = "";
+            $("previewAddActualA").textContent = "-";
+            $("previewAddActualB").textContent = "-";
+            $("previewAddShares").textContent = "-";
+            return;
+          }
+          const amountA = parseTokenInput(rawA, state.tokenAMeta.decimals);
+          const [requiredB, mintedShares] = await state.amm.quoteAddLiquidityFromA(amountA);
+          $("addAmountB").value = formatToken(requiredB, state.tokenBMeta.decimals, 12);
+          $("previewAddActualA").textContent = `${rawA} ${state.tokenAMeta.symbol}`;
+          $("previewAddActualB").textContent = `${formatToken(requiredB, state.tokenBMeta.decimals, 12)} ${state.tokenBMeta.symbol}`;
+          $("previewAddShares").textContent = formatShare(mintedShares);
+        } else {
+          if (!rawB) {
+            $("addAmountA").value = "";
+            $("previewAddActualA").textContent = "-";
+            $("previewAddActualB").textContent = "-";
+            $("previewAddShares").textContent = "-";
+            return;
+          }
+          const amountB = parseTokenInput(rawB, state.tokenBMeta.decimals);
+          const [requiredA, mintedShares] = await state.amm.quoteAddLiquidityFromB(amountB);
+          $("addAmountA").value = formatToken(requiredA, state.tokenAMeta.decimals, 12);
+          $("previewAddActualA").textContent = `${formatToken(requiredA, state.tokenAMeta.decimals, 12)} ${state.tokenAMeta.symbol}`;
+          $("previewAddActualB").textContent = `${rawB} ${state.tokenBMeta.symbol}`;
+          $("previewAddShares").textContent = formatShare(mintedShares);
+        }
+      } catch {}
+    }
+
+    async function executeAddLiquidity() {
+      try {
+        await initContracts();
+        const rawA = num($("addAmountA").value), rawB = num($("addAmountB").value);
+        if (!rawA || !rawB) throw new Error("请同时输入两个资产数量");
+        const amountA = parseTokenInput(rawA, state.tokenAMeta.decimals);
+        const amountB = parseTokenInput(rawB, state.tokenBMeta.decimals);
+        const [actualA, actualB] = await state.amm.quoteAddLiquidity(amountA, amountB);
+        const slippageBps = slippageBpsFrom("addSlippageInput");
+        const tx = await state.amm.addLiquidity(
+          amountA, amountB,
+          applySlippageMin(actualA, slippageBps),
+          applySlippageMin(actualB, slippageBps)
+        );
+        setStatus(`Add Liquidity 已提交：${tx.hash}`);
+        await tx.wait();
+        setStatus("Add Liquidity 执行成功。", "success");
+        await refreshState();
+      } catch (err) { setStatus(explainError(err), "error"); }
+    }
+
+    async function autoPreviewRemoveLiquidity() {
+      try {
+        await initContracts();
+        const rawShares = num($("removeShareAmount").value);
+        if (!rawShares) {
+          $("previewRemoveA").textContent = "-";
+          $("previewRemoveB").textContent = "-";
+          return;
+        }
+        const shareAmount = parseShareInput(rawShares);
+        const [amountA, amountB] = await state.amm.quoteRemoveLiquidity(shareAmount);
+        $("previewRemoveA").textContent = `${formatToken(amountA, state.tokenAMeta.decimals, 12)} ${state.tokenAMeta.symbol}`;
+        $("previewRemoveB").textContent = `${formatToken(amountB, state.tokenBMeta.decimals, 12)} ${state.tokenBMeta.symbol}`;
+      } catch {}
+    }
+
+    function fillRemoveByPercent(percent) {
+      if (!state.currentUserShares || state.currentUserShares === 0n) {
+        $("removeShareAmount").value = "";
+        $("previewRemoveA").textContent = "-";
+        $("previewRemoveB").textContent = "-";
+        return;
+      }
+      const shareAmount = (state.currentUserShares * BigInt(percent)) / 100n;
+      $("removeShareAmount").value = formatShare(shareAmount, 12);
+      autoPreviewRemoveLiquidity();
+    }
+
+    async function executeRemoveLiquidity() {
+      try {
+        await initContracts();
+        const rawShares = num($("removeShareAmount").value);
+        if (!rawShares) throw new Error("请输入 Share Amount");
+        const shareAmount = parseShareInput(rawShares);
+        const [amountA, amountB] = await state.amm.quoteRemoveLiquidity(shareAmount);
+        const bps = slippageBpsFrom("slippageInput");
+        const tx = await state.amm.removeLiquidity(
+          shareAmount,
+          applySlippageMin(amountA, bps),
+          applySlippageMin(amountB, bps)
+        );
+        setStatus(`Remove Liquidity 已提交：${tx.hash}`);
+        await tx.wait();
+        setStatus("Remove Liquidity 执行成功。", "success");
+        await refreshState();
+      } catch (err) { setStatus(explainError(err), "error"); }
+    }
+
+    function syncSwapSelects(changed) {
+      if (changed === "from") $("swapToToken").value = $("swapFromToken").value === "A" ? "B" : "A";
+      else $("swapFromToken").value = $("swapToToken").value === "A" ? "B" : "A";
+    }
+
+    async function updateSwapPreview() {
+      try {
+        if (!state.amm) return;
+        const fromToken = $("swapFromToken").value, toToken = $("swapToToken").value;
+        if (fromToken === toToken) syncSwapSelects("from");
+        const fromRaw = $("swapFromAmount").value.trim(), toRaw = $("swapToAmount").value.trim();
+
+        if (state.swapLastEdited === "from") {
+          if (!fromRaw) { $("swapToAmount").value = ""; return; }
+          if (fromToken === "A" && toToken === "B") {
+            const amountOut = await state.amm.quoteSwapAForB(parseTokenInput(fromRaw, state.tokenAMeta.decimals));
+            $("swapToAmount").value = formatToken(amountOut, state.tokenBMeta.decimals, 12);
+          } else {
+            const amountOut = await state.amm.quoteSwapBForA(parseTokenInput(fromRaw, state.tokenBMeta.decimals));
+            $("swapToAmount").value = formatToken(amountOut, state.tokenAMeta.decimals, 12);
+          }
+        } else {
+          if (!toRaw) { $("swapFromAmount").value = ""; return; }
+          if (fromToken === "A" && toToken === "B") {
+            const requiredIn = await state.amm.quoteSwapAForExactB(parseTokenInput(toRaw, state.tokenBMeta.decimals));
+            $("swapFromAmount").value = formatToken(requiredIn, state.tokenAMeta.decimals, 12);
+          } else {
+            const requiredIn = await state.amm.quoteSwapBForExactA(parseTokenInput(toRaw, state.tokenAMeta.decimals));
+            $("swapFromAmount").value = formatToken(requiredIn, state.tokenBMeta.decimals, 12);
+          }
+        }
+      } catch {}
+    }
+
+    async function executeSwap() {
+      try {
+        await initContracts();
+        const fromToken = $("swapFromToken").value, toToken = $("swapToToken").value;
+        const fromRaw = $("swapFromAmount").value.trim(), toRaw = $("swapToAmount").value.trim();
+        if (!fromRaw || !toRaw) throw new Error("请先输入数量并等待报价完成");
+        let tx;
+        if (fromToken === "A" && toToken === "B") {
+          tx = await state.amm.swapAForB(
+            parseTokenInput(fromRaw, state.tokenAMeta.decimals),
+            0
+          );
+        } else if (fromToken === "B" && toToken === "A") {
+          tx = await state.amm.swapBForA(
+            parseTokenInput(fromRaw, state.tokenBMeta.decimals),
+            0
+          );
+        } else {
+          throw new Error("无效的兑换方向");
+        }
+        setStatus(`Swap 已提交：${tx.hash}`);
+        await tx.wait();
+        setStatus("Swap 执行成功。", "success");
+        $("swapFromAmount").value = "";
+        $("swapToAmount").value = "";
+        await refreshState();
+      } catch (err) { setStatus(explainError(err), "error"); }
+    }
+
+    function explainError(err) {
+      const message = err?.shortMessage || err?.reason || err?.message || String(err);
+      if (message.includes("user rejected")) return "用户取消了签名或交易。";
+      if (message.includes("Slippage too high")) return "滑点过高，交易已回滚。";
+      if (message.includes("transfer amount exceeds")) return "余额不足。";
+      if (message.includes("allowance")) return "授权额度不足，请先 Approve。";
+      if (message.includes("Empty pool")) return "池子当前为空，请先初始化流动性。";
+      return message;
+    }
+
+    $("connectBtn").addEventListener("click", connectWallet);
+    $("refreshBtn").addEventListener("click", refreshState);
+    $("approveABtn").addEventListener("click", () => approveToken("A"));
+    $("approveBBtn").addEventListener("click", () => approveToken("B"));
+    $("addLiquidityBtn").addEventListener("click", executeAddLiquidity);
+    $("removeLiquidityBtn").addEventListener("click", executeRemoveLiquidity);
+    $("executeSwapBtn").addEventListener("click", executeSwap);
+
+    $("addAmountA").addEventListener("input", async () => {
+      state.addLastEdited = "A";
+      await autoPreviewAddLiquidity();
+    });
+    $("addAmountB").addEventListener("input", async () => {
+      state.addLastEdited = "B";
+      await autoPreviewAddLiquidity();
+    });
+
+    $("removeShareAmount").addEventListener("input", autoPreviewRemoveLiquidity);
+    document.querySelectorAll("[data-remove-pct]").forEach(btn => {
+      btn.addEventListener("click", () => fillRemoveByPercent(Number(btn.dataset.removePct)));
+    });
+
+    $("swapFromToken").addEventListener("change", async () => { syncSwapSelects("from"); await updateSwapPreview(); });
+    $("swapToToken").addEventListener("change", async () => { syncSwapSelects("to"); await updateSwapPreview(); });
+    $("swapDirectionBtn").addEventListener("click", async () => {
+      const currentFrom = $("swapFromToken").value;
+      $("swapFromToken").value = $("swapToToken").value;
+      $("swapToToken").value = currentFrom;
+      const oldFromAmount = $("swapFromAmount").value;
+      $("swapFromAmount").value = $("swapToAmount").value;
+      $("swapToAmount").value = oldFromAmount;
+      state.swapLastEdited = $("swapFromAmount").value ? "from" : "to";
+      await updateSwapPreview();
+    });
+    $("swapFromAmount").addEventListener("input", async () => { state.swapLastEdited = "from"; await updateSwapPreview(); });
+    $("swapToAmount").addEventListener("input", async () => { state.swapLastEdited = "to"; await updateSwapPreview(); });
+
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", async () => { setStatus("检测到账户切换，正在刷新..."); await connectWallet(); try { await refreshState(); } catch {} });
+      window.ethereum.on("chainChanged", async () => { setStatus("检测到网络切换，正在刷新..."); await connectWallet(); try { await refreshState(); } catch {} });
+    }
+  </script>
+</body>
+</html>
